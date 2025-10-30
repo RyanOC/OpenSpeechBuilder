@@ -1,0 +1,17 @@
+This directory contains placeholder assets for the soundboard.
+
+For a real implementation, you would add:
+- PNG/JPG images for each pad (yes.png, no.png, etc.)
+- MP3/WAV audio files for each pad (yes.mp3, no.mp3, etc.)
+
+The current config references these files:
+- yes.png, yes.mp3
+- no.png, no.mp3  
+- hello.png, hello.mp3
+- goodbye.png, goodbye.mp3
+- please.png, please.mp3
+- thankyou.png, thankyou.mp3
+- help.png, help.mp3
+- stop.png, stop.mp3
+
+You can replace these with your own assets or update the config to point to different files.
