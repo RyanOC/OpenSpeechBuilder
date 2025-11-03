@@ -2,6 +2,8 @@
 
 A simple, accessible web-based AAC (Augmentative and Alternative Communication) soundboard with configurable pads, text-to-speech, and keyboard shortcuts.
 
+Live Demo: https://open-speech-builder.vercel.app/
+
 ## Features
 
 - 4×4 grid of customizable sound pads
