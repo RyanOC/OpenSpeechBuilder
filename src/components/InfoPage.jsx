@@ -4,7 +4,7 @@ function InfoPage({ onClose, isDarkMode }) {
       <div className={`info-panel ${isDarkMode ? 'dark' : 'light'}`}>
         <div className="info-header">
           <h1>Open Speech Builder</h1>
-          <button onClick={onClose} className="close-btn" aria-label="Close info panel">
+          <button onClick={onClose} className="btn btn-ghost btn-icon btn-sm close-btn" aria-label="Close info panel">
             ×
           </button>
         </div>
@@ -31,39 +31,89 @@ function InfoPage({ onClose, isDarkMode }) {
           </section>
 
           <section className="info-section">
-            <h2>How to use it</h2>
-            <h3>Basic Usage</h3>
+            <h2>Three Communication Modes</h2>
+            <p>Open Speech Builder offers three different ways to communicate:</p>
+            
+            <h3>🔊 Soundboard</h3>
             <ul>
-              <li><strong>Click or tap</strong> any colored pad to hear it speak</li>
-              <li><strong>Use keyboard shortcuts</strong> - each pad has a key (1234/QWER/ASDF/ZXCV)</li>
-              <li><strong>Adjust volume</strong> with the slider in the header</li>
-              <li><strong>Load different configs</strong> using the "Load Config..." button</li>
+              <li><strong>Quick communication</strong> - Pre-configured buttons for common phrases</li>
+              <li><strong>Keyboard shortcuts</strong> - Each button has a key (1234/QWER/ASDF/ZXCV)</li>
+              <li><strong>Customizable layout</strong> - Edit buttons, colors, and sounds</li>
+              <li><strong>Custom images</strong> - Add visual icons to buttons</li>
             </ul>
 
-            <h3>Admin Features</h3>
+            <h3>📝 Sentence Builder</h3>
             <ul>
-              <li><strong>Press Ctrl+Shift+A</strong> or click "Admin" to open the configuration editor</li>
-              <li><strong>Edit the JSON</strong> directly to customize pads</li>
-              <li><strong>Test voices</strong> and generate text-to-speech for all pads</li>
-              <li><strong>Add new pads</strong> or modify existing ones</li>
-              <li><strong>Export your config</strong> to save and share</li>
+              <li><strong>Word-by-word</strong> - Build sentences by selecting individual words</li>
+              <li><strong>Category organization</strong> - Words grouped by type (People, Actions, Things, etc.)</li>
+              <li><strong>Custom vocabulary</strong> - Add your own words to any category</li>
+              <li><strong>Sentence history</strong> - Your last sentence is saved automatically</li>
+            </ul>
+
+            <h3>🎨 Image Designer</h3>
+            <ul>
+              <li><strong>Create custom icons</strong> - Design 16x16 pixel images for buttons</li>
+              <li><strong>Simple tools</strong> - Draw, erase, and color pick</li>
+              <li><strong>Theme-aware</strong> - Default colors adapt to light/dark theme</li>
+              <li><strong>Save library</strong> - Store and reuse your custom images</li>
             </ul>
           </section>
 
           <section className="info-section">
-            <h2>Configuration</h2>
+            <h2>How to use it</h2>
+            <h3>Basic Usage</h3>
+            <ul>
+              <li><strong>Switch views</strong> - Use the toggle button (🔊📝🎨) to change modes</li>
+              <li><strong>Click or tap</strong> any button to hear it speak</li>
+              <li><strong>Adjust volume</strong> with the slider in the menu (hamburger button)</li>
+              <li><strong>Change theme</strong> - Toggle between dark and light mode</li>
+              <li><strong>Select voice</strong> - Choose from available system voices in menu</li>
+            </ul>
+
+            <h3>Edit Mode Features</h3>
+            <ul>
+              <li><strong>Enable edit mode</strong> - Click the ✏️ button to customize buttons</li>
+              <li><strong>Configure buttons</strong> - Click any button to edit label, color, sound, image</li>
+              <li><strong>Set display order</strong> - Use order numbers to arrange buttons</li>
+              <li><strong>Move between categories</strong> - Change which category a word belongs to</li>
+              <li><strong>Customize categories</strong> - Edit category names, colors, and icons</li>
+            </ul>
+
+            <h3>Admin Features</h3>
+            <ul>
+              <li><strong>Open Admin panel</strong> - Click "Admin" in the menu</li>
+              <li><strong>Edit JSON directly</strong> - Advanced configuration editing</li>
+              <li><strong>Test voices</strong> - Try different text-to-speech voices</li>
+              <li><strong>Export/Import configs</strong> - Save and share your setups</li>
+              <li><strong>Reset settings</strong> - Return to defaults if needed</li>
+            </ul>
+          </section>
+
+          <section className="info-section">
+            <h2>Button Configuration</h2>
             <p>
-              The soundboard is completely customizable through JSON configuration files. Each pad can be configured with:
+              Every button can be fully customized through the edit interface or JSON configuration:
             </p>
 
-            <h3>Pad Properties</h3>
+            <h3>Button Properties</h3>
             <ul>
-              <li><strong>id</strong> - Unique identifier for the pad</li>
-              <li><strong>label</strong> - Text displayed on the pad</li>
+              <li><strong>label</strong> - Text displayed on the button</li>
               <li><strong>sound</strong> - Either "tts:Text to speak" or path to audio file</li>
-              <li><strong>color</strong> - Hex color code for the pad background</li>
+              <li><strong>color</strong> - Hex color code for the button background</li>
               <li><strong>key</strong> - Keyboard shortcut (single character)</li>
-              <li><strong>voice</strong> - Specific voice name for TTS (optional)</li>
+              <li><strong>image</strong> - Custom 16x16 pixel icon (created in Image Designer)</li>
+              <li><strong>order</strong> - Display order number (1, 2, 3...) for custom sorting</li>
+              <li><strong>category</strong> - Which category the word belongs to (Sentence Builder only)</li>
+            </ul>
+
+            <h3>Display Order</h3>
+            <p>
+              Use the order field to control button arrangement:
+            </p>
+            <ul>
+              <li><strong>Numbered buttons</strong> appear first, sorted by order (1, 2, 3...)</li>
+              <li><strong>Unnumbered buttons</strong> appear after, in their original positions</li>
+              <li><strong>Gaps are fine</strong> - You can use 1, 5, 10 to leave room for future buttons</li>
             </ul>
 
             <h3>Example Configuration</h3>
@@ -77,10 +127,74 @@ function InfoPage({ onClose, isDarkMode }) {
       "label": "Hello",
       "sound": "tts:Hello there, how are you?",
       "color": "#3b82f6",
-      "key": "1"
+      "key": "1",
+      "image": "smiley",
+      "order": "1"
     }
-  ]
+  ],
+  "imageLibrary": {
+    "smiley": {
+      "name": "Smiley Face",
+      "data": [[0,1,1,0], [1,0,0,1], [1,0,0,1], [0,1,1,0]]
+    }
+  }
 }`}</pre>
+          </section>
+
+          <section className="info-section">
+            <h2>Sentence Builder Features</h2>
+            <p>
+              The Sentence Builder helps you construct complete sentences word by word:
+            </p>
+
+            <h3>Word Categories</h3>
+            <ul>
+              <li><strong>⭐ Favorites</strong> - Most commonly used words</li>
+              <li><strong>🔗 Helper Words</strong> - Connecting words (am, is, are, the, etc.)</li>
+              <li><strong>👥 People</strong> - Pronouns and family members</li>
+              <li><strong>🏃 Actions</strong> - Verbs and action words</li>
+              <li><strong>📦 Things</strong> - Nouns and objects</li>
+              <li><strong>🏠 Places</strong> - Locations and directions</li>
+              <li><strong>😊 Feelings</strong> - Emotions and descriptive words</li>
+            </ul>
+
+            <h3>Custom Vocabulary</h3>
+            <ul>
+              <li><strong>Add new words</strong> - Click the "+" button in any category</li>
+              <li><strong>Edit existing words</strong> - Customize pronunciation, color, and images</li>
+              <li><strong>Move words</strong> - Change which category a word belongs to</li>
+              <li><strong>Colorful variety</strong> - Each word gets a unique color automatically</li>
+            </ul>
+
+            <h3>Category Customization</h3>
+            <ul>
+              <li><strong>Edit category tabs</strong> - Change names, colors, and icons</li>
+              <li><strong>Custom icons</strong> - Use emojis or create custom images</li>
+              <li><strong>Personalized organization</strong> - Adapt categories to your needs</li>
+            </ul>
+          </section>
+
+          <section className="info-section">
+            <h2>Image Designer</h2>
+            <p>
+              Create custom 16x16 pixel icons for your buttons:
+            </p>
+
+            <h3>Drawing Tools</h3>
+            <ul>
+              <li><strong>🎨 Brush</strong> - Draw pixels with selected color</li>
+              <li><strong>🧽 Eraser</strong> - Remove pixels (make transparent)</li>
+              <li><strong>🎯 Color Picker</strong> - Sample colors from existing pixels</li>
+              <li><strong>Color selector</strong> - Choose any color, defaults to theme-appropriate color</li>
+            </ul>
+
+            <h3>Image Management</h3>
+            <ul>
+              <li><strong>Save images</strong> - Store your creations in the image library</li>
+              <li><strong>Load images</strong> - Edit existing images from your library</li>
+              <li><strong>Export/Import</strong> - Share image libraries as JSON</li>
+              <li><strong>Preview</strong> - See how images look on buttons</li>
+            </ul>
           </section>
 
           <section className="info-section">
@@ -116,22 +230,29 @@ function InfoPage({ onClose, isDarkMode }) {
           <section className="info-section">
             <h2>Getting Started</h2>
             <ol>
-              <li><strong>Try the default soundboard</strong> - Click the pads to hear common phrases</li>
-              <li><strong>Test different voices</strong> - Open Admin panel (Ctrl+Shift+A) and try voice options</li>
-              <li><strong>Customize for your needs</strong> - Edit the JSON to add your own phrases and colors</li>
-              <li><strong>Save your config</strong> - Export your customized soundboard to keep it</li>
-              <li><strong>Share with others</strong> - Send your config file to caregivers or family</li>
+              <li><strong>Choose your mode</strong> - Start with Soundboard for quick phrases or Sentence Builder for custom sentences</li>
+              <li><strong>Try the defaults</strong> - Click buttons to hear how text-to-speech works</li>
+              <li><strong>Customize your experience</strong> - Change voice and volume in the menu (hamburger button)</li>
+              <li><strong>Enter edit mode</strong> - Click the ✏️ button to start customizing buttons</li>
+              <li><strong>Add personal content</strong> - Create buttons with your own words and phrases</li>
+              <li><strong>Design custom icons</strong> - Use the Image Designer to create visual symbols</li>
+              <li><strong>Organize with order</strong> - Use display order numbers to arrange buttons logically</li>
+              <li><strong>Export your setup</strong> - Save your customized configuration to keep it safe</li>
             </ol>
           </section>
 
           <section className="info-section">
             <h2>Tips for Caregivers</h2>
             <ul>
-              <li><strong>Start simple</strong> - Begin with basic needs like "yes", "no", "more", "help"</li>
-              <li><strong>Use consistent colors</strong> - Same colors for similar concepts (green for "yes", red for "no")</li>
-              <li><strong>Practice together</strong> - Help the user learn the keyboard shortcuts</li>
-              <li><strong>Customize gradually</strong> - Add new phrases as the user becomes comfortable</li>
-              <li><strong>Keep backups</strong> - Export and save working configurations</li>
+              <li><strong>Start with Soundboard</strong> - Begin with pre-made phrases for immediate communication</li>
+              <li><strong>Progress to Sentence Builder</strong> - Introduce word-by-word construction as skills develop</li>
+              <li><strong>Use visual cues</strong> - Add custom images to buttons for better recognition</li>
+              <li><strong>Organize logically</strong> - Use display order to put most important buttons first</li>
+              <li><strong>Personalize vocabulary</strong> - Add family names, favorite foods, and personal interests</li>
+              <li><strong>Consistent colors</strong> - Use similar colors for related concepts</li>
+              <li><strong>Practice together</strong> - Help the user learn button locations and shortcuts</li>
+              <li><strong>Regular backups</strong> - Export configurations frequently to prevent loss</li>
+              <li><strong>Adapt categories</strong> - Customize Sentence Builder categories for individual needs</li>
             </ul>
           </section>
 

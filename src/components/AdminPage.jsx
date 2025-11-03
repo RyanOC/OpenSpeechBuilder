@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 
-function AdminPage({ config, onConfigUpdate, onClose, onLoadConfig, selectedVoice, isDarkMode, onResetSettings }) {
+function AdminPage({ config, onConfigUpdate, onClose, onLoadConfig, selectedVoice, isDarkMode, onResetSettings, onResetConfig }) {
   const [jsonText, setJsonText] = useState('')
   const [error, setError] = useState('')
   const [testText, setTestText] = useState('Hello, this is a test')
@@ -116,7 +116,7 @@ function AdminPage({ config, onConfigUpdate, onClose, onLoadConfig, selectedVoic
       <div className={`admin-panel ${isDarkMode ? 'dark' : 'light'}`}>
         <div className="admin-header">
           <h2>Soundboard Admin</h2>
-          <button onClick={onClose} className="close-btn" aria-label="Close admin panel">
+          <button onClick={onClose} className="btn btn-ghost btn-icon btn-sm close-btn" aria-label="Close admin panel">
             ×
           </button>
         </div>
@@ -133,12 +133,12 @@ function AdminPage({ config, onConfigUpdate, onClose, onLoadConfig, selectedVoic
                   placeholder="Test text with current voice"
                   className="test-input"
                 />
-                <button onClick={handleTestVoice} className="test-btn">
+                <button onClick={handleTestVoice} className="btn btn-success test-btn">
                   Test Current Voice
                 </button>
               </div>
               
-              <button onClick={handleGenerateTTS} className="generate-tts-btn">
+              <button onClick={handleGenerateTTS} className="btn btn-info generate-tts-btn">
                 Generate TTS for All Pads
               </button>
               
@@ -148,16 +148,16 @@ function AdminPage({ config, onConfigUpdate, onClose, onLoadConfig, selectedVoic
             </div>
           </div>
 
-          <div className="admin-section">
+          <div className="admin-section json-section">
             <h3>Configuration Editor</h3>
             <div className="editor-controls">
-              <button onClick={onLoadConfig} className="load-config-btn">
+              <button onClick={onLoadConfig} className="btn btn-success load-config-btn">
                 Load Config File...
               </button>
-              <button onClick={handleAddPad} className="add-pad-btn">
+              <button onClick={handleAddPad} className="btn btn-success add-pad-btn">
                 Add New Pad
               </button>
-              <button onClick={handleExport} className="export-btn">
+              <button onClick={handleExport} className="btn btn-warning export-btn">
                 Export Config
               </button>
             </div>
@@ -167,19 +167,28 @@ function AdminPage({ config, onConfigUpdate, onClose, onLoadConfig, selectedVoic
               onChange={(e) => setJsonText(e.target.value)}
               className="json-editor"
               placeholder="Enter JSON configuration..."
-              rows={20}
             />
             
             {error && <div className="admin-error">{error}</div>}
             
             <div className="admin-actions">
-              <button onClick={handleSave} className="save-btn">
+              <button onClick={handleSave} className="btn btn-primary save-btn">
                 Apply Changes
               </button>
-              <button onClick={onClose} className="cancel-btn">
+              <button onClick={onClose} className="btn btn-secondary cancel-btn">
                 Cancel
               </button>
             </div>
+          </div>
+
+          <div className="admin-section">
+            <h3>Configuration</h3>
+            <p className="reset-warning">
+              Reset to default soundboard configuration. This will remove all your custom button settings and reload from the default config file.
+            </p>
+            <button onClick={onResetConfig} className="btn btn-danger reset-settings-btn">
+              🔄 Reset Configuration
+            </button>
           </div>
 
           <div className="admin-section">
@@ -187,7 +196,7 @@ function AdminPage({ config, onConfigUpdate, onClose, onLoadConfig, selectedVoic
             <p className="reset-warning">
               Reset all user preferences including theme, language, voice, volume, and saved settings. This action cannot be undone.
             </p>
-            <button onClick={onResetSettings} className="reset-settings-btn">
+            <button onClick={onResetSettings} className="btn btn-danger reset-settings-btn">
               🔄 Reset All Settings
             </button>
           </div>

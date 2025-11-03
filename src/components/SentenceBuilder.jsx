@@ -1,6 +1,33 @@
 import { useState, useEffect } from 'react'
 
-function SentenceBuilder({ selectedVoice, isDarkMode }) {
+// Color palette for randomizing word button colors
+const WORD_COLORS = [
+  '#10b981', // emerald
+  '#ef4444', // red
+  '#3b82f6', // blue
+  '#f59e0b', // amber
+  '#8b5cf6', // violet
+  '#06b6d4', // cyan
+  '#ec4899', // pink
+  '#84cc16', // lime
+  '#f97316', // orange
+  '#6366f1', // indigo
+  '#14b8a6', // teal
+  '#a855f7', // purple
+  '#22d3ee', // sky
+  '#fb7185', // rose
+  '#facc15', // yellow
+  '#16a34a', // green
+]
+
+// Function to get a random color for word buttons
+const getRandomWordColor = (word, categoryKey, wordIndex) => {
+  // Use the word index to cycle through colors, creating variety within each category
+  const colorIndex = wordIndex % WORD_COLORS.length
+  return WORD_COLORS[colorIndex]
+}
+
+function SentenceBuilder({ selectedVoice, isDarkMode, isEditMode, onWordEdit, onCategoriesReady, onCategoryEdit }) {
   // State for the sentence being built
   const [selectedWords, setSelectedWords] = useState(() => {
     // Load last sentence from localStorage
@@ -8,8 +35,126 @@ function SentenceBuilder({ selectedVoice, isDarkMode }) {
     return saved ? JSON.parse(saved) : []
   })
 
-  // Comprehensive AAC vocabulary organized by categories
-  const vocabulary = {
+  // Load word configurations
+  const [wordConfigs, setWordConfigs] = useState(() => {
+    const saved = localStorage.getItem('sentence-builder-words')
+    return saved ? JSON.parse(saved) : {}
+  })
+
+  // Reload word configurations when they change
+  const reloadWordConfigs = () => {
+    console.log('reloadWordConfigs called')
+    const saved = localStorage.getItem('sentence-builder-words')
+    const newConfigs = saved ? JSON.parse(saved) : {}
+    console.log('Loaded word configs:', newConfigs)
+    setWordConfigs(newConfigs)
+  }
+
+  // Function to get word configuration
+  const getWordConfig = (categoryKey, wordIndex) => {
+    const wordKey = `${categoryKey}-${wordIndex}`
+    const config = wordConfigs[wordKey] || null
+    
+    // Debug: Log all lookups for troubleshooting
+    if (categoryKey && wordIndex !== undefined) {
+      console.log(`Looking for config: ${wordKey}, found:`, config)
+    }
+    
+    return config
+  }
+
+  // Function to get category configuration
+  const getCategoryConfig = (categoryKey) => {
+    const categoryConfigs = JSON.parse(localStorage.getItem('sentence-builder-categories') || '{}')
+    return categoryConfigs[categoryKey] || null
+  }
+
+  // Function to render word images (similar to Pad component)
+  const renderWordImage = (imageIdOrData) => {
+    console.log('renderWordImage called with:', imageIdOrData)
+    let imageData
+    
+    // Handle both old format (full image object) and new format (image ID)
+    if (typeof imageIdOrData === 'string') {
+      // New format: image ID
+      console.log('Looking for image ID:', imageIdOrData)
+      const saved = localStorage.getItem('image-designer-library')
+      console.log('Image library exists:', !!saved)
+      
+      if (!saved) {
+        console.log('No image library in localStorage')
+        return null
+      }
+      
+      let imageLibrary
+      try {
+        imageLibrary = JSON.parse(saved)
+        console.log('Available image IDs:', Object.keys(imageLibrary))
+      } catch (err) {
+        console.log('Error parsing image library:', err)
+        return null
+      }
+      
+      imageData = imageLibrary[imageIdOrData]
+      console.log('Found image data:', !!imageData)
+    } else if (imageIdOrData && imageIdOrData.data) {
+      // Old format: full image object
+      imageData = imageIdOrData
+      console.log('Using direct image data')
+    }
+    
+    if (!imageData || !imageData.data) {
+      console.log('No image data found for:', imageIdOrData)
+      return null
+    }
+    
+    console.log('Rendering image with data:', imageData)
+
+    return (
+      <div
+        className="pad-image"
+        style={{
+          width: 'calc(100% - 20px)',
+          height: 'calc(100% - 24px)',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(16, 1fr)',
+          gridTemplateRows: 'repeat(16, 1fr)',
+          gap: 0,
+          position: 'absolute',
+          top: '8px',
+          left: '10px'
+        }}
+      >
+        {imageData.data.flat().map((pixel, index) => {
+          let pixelColor = 'transparent'
+          if (pixel) {
+            // Handle both formats: 1/0 (starter images) and hex colors (new images)
+            if (pixel === 1) {
+              pixelColor = '#000000' // Black for starter images
+            } else if (typeof pixel === 'string' && pixel.startsWith('#')) {
+              pixelColor = pixel // Use the actual color
+            } else {
+              pixelColor = '#000000' // Default to black
+            }
+          }
+          
+          return (
+            <div
+              key={index}
+              className="image-pixel"
+              style={{
+                backgroundColor: pixelColor
+              }}
+            />
+          )
+        })}
+      </div>
+    )
+  }
+
+  // Load custom words and merge with base vocabulary
+  const getVocabulary = () => {
+    const baseVocabulary = {
     favorites: {
       label: "Favorites",
       icon: "⭐",
@@ -59,26 +204,145 @@ function SentenceBuilder({ selectedVoice, isDarkMode }) {
       label: "Social",
       icon: "💬",
       words: ["hello", "hi", "goodbye", "bye", "please", "thank you", "thanks", "sorry", "excuse me", "yes", "no", "maybe", "okay", "sure", "welcome", "congratulations", "good morning", "good night", "how are you", "fine", "good", "great", "wonderful", "awesome", "cool", "wow", "oh no", "uh oh", "oops"]
+    },
+    punctuation: {
+      label: "Punctuation",
+      icon: "❓",
+      words: [".", "?", "!", ",", ";", ":", "-", "(", ")", "...", "—", "'", '"', "&", "@", "#", "%", "*", "+", "=", "/", "\\", "|", "~", "`"]
     }
+    }
+
+    // Load custom words and merge with base vocabulary
+    const savedCustomWords = localStorage.getItem('sentence-builder-custom-words')
+    const customWords = savedCustomWords ? JSON.parse(savedCustomWords) : {}
+
+    // Merge custom words with base vocabulary
+    const mergedVocabulary = { ...baseVocabulary }
+    Object.keys(customWords).forEach(categoryKey => {
+      if (mergedVocabulary[categoryKey] && customWords[categoryKey]) {
+        mergedVocabulary[categoryKey] = {
+          ...mergedVocabulary[categoryKey],
+          words: [...mergedVocabulary[categoryKey].words, ...customWords[categoryKey]]
+        }
+      }
+    })
+
+    return mergedVocabulary
   }
+
+  const [vocabulary, setVocabulary] = useState(getVocabulary())
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  // Pass categories to parent when vocabulary is ready
+  useEffect(() => {
+    if (onCategoriesReady && vocabulary) {
+      onCategoriesReady(vocabulary)
+    }
+  }, [vocabulary, onCategoriesReady])
+
+  // Reload vocabulary when custom words change
+  const reloadVocabulary = () => {
+    setVocabulary(getVocabulary())
+  }
+
+  // Combined reload function for both vocabulary and word configs
+  const reloadAll = () => {
+    console.log('Reloading sentence builder configs...')
+    
+    // Debug: Show what's in localStorage
+    const savedWords = localStorage.getItem('sentence-builder-words')
+    console.log('Raw localStorage sentence-builder-words:', savedWords)
+    
+    reloadVocabulary()
+    reloadWordConfigs()
+    setRefreshKey(prev => prev + 1) // Force re-render
+  }
+
+  // Set up global reload function
+  useEffect(() => {
+    window.reloadSentenceBuilderConfigs = reloadAll
+    return () => {
+      delete window.reloadSentenceBuilderConfigs
+    }
+  }, [])
 
   // Current active category
   const [activeCategory, setActiveCategory] = useState('favorites')
   
-  // Get words for current category
-  const currentWords = vocabulary[activeCategory]?.words || []
+  // Get words for current category and sort them by order if configured
+  const baseWords = vocabulary[activeCategory]?.words || []
+  const currentWords = baseWords.map((word, index) => ({ word, index })).sort((a, b) => {
+    const aConfig = getWordConfig(activeCategory, a.index)
+    const bConfig = getWordConfig(activeCategory, b.index)
+    const aOrder = aConfig?.order ? parseInt(aConfig.order) : null
+    const bOrder = bConfig?.order ? parseInt(bConfig.order) : null
+    
+    // If both have order values, sort by order number
+    if (aOrder !== null && bOrder !== null) {
+      return aOrder - bOrder
+    }
+    
+    // If only a has order, a comes first
+    if (aOrder !== null && bOrder === null) {
+      return -1
+    }
+    
+    // If only b has order, b comes first
+    if (aOrder === null && bOrder !== null) {
+      return 1
+    }
+    
+    // If neither has order, maintain original order
+    return 0
+  })
 
-  // Generate sentence text from selected words
-  const sentenceText = selectedWords.join(' ')
+  // Generate sentence text from selected words for display
+  const sentenceText = selectedWords.map(word => 
+    typeof word === 'string' ? word : word.display
+  ).join(' ')
+  
+  // Generate TTS text from selected words for speech
+  const ttsText = selectedWords.map(word => 
+    typeof word === 'string' ? word : word.tts
+  ).join(' ')
 
   // Save sentence to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('sentence-builder-last', JSON.stringify(selectedWords))
   }, [selectedWords])
 
-  // Add word to sentence
-  const handleWordClick = (word) => {
-    setSelectedWords(prev => [...prev, word])
+  // Handle category tab clicks
+  const handleCategoryClick = (categoryKey) => {
+    if (isEditMode && onCategoryEdit) {
+      onCategoryEdit(categoryKey)
+    } else {
+      setActiveCategory(categoryKey)
+    }
+  }
+
+  // Add word to sentence or edit in edit mode
+  const handleWordClick = (word, categoryKey, wordIndex) => {
+    if (isEditMode && onWordEdit) {
+      onWordEdit(categoryKey, wordIndex, word)
+    } else {
+      // Get word configuration for both display and TTS
+      const wordConfig = getWordConfig(categoryKey, wordIndex)
+      const displayText = wordConfig?.label || word
+      
+      // Extract TTS text from sound configuration
+      let ttsText = displayText // Default to display text
+      if (wordConfig?.sound && wordConfig.sound.startsWith('tts:')) {
+        ttsText = wordConfig.sound.substring(4) // Remove 'tts:' prefix
+      }
+      
+      // Store word object with both display and TTS text
+      const wordObject = {
+        display: displayText,
+        tts: ttsText
+      }
+      
+      setSelectedWords(prev => [...prev, wordObject])
+    }
   }
 
   // Remove last word (backspace)
@@ -91,14 +355,23 @@ function SentenceBuilder({ selectedVoice, isDarkMode }) {
     setSelectedWords([])
   }
 
+  // Handle adding a new word
+  const handleAddNewWord = () => {
+    if (onWordEdit) {
+      // Create a new word entry - we'll use a placeholder that the parent can handle
+      const newWordIndex = vocabulary[activeCategory].words.length
+      onWordEdit(activeCategory, newWordIndex, null) // null indicates new word
+    }
+  }
+
   // Speak the sentence using TTS
   const handlePlay = () => {
-    if (!sentenceText.trim()) return
+    if (!ttsText.trim()) return
 
     // Stop any ongoing speech
     speechSynthesis.cancel()
 
-    const utterance = new SpeechSynthesisUtterance(sentenceText)
+    const utterance = new SpeechSynthesisUtterance(ttsText)
     
     // Use the globally selected voice if available
     if (selectedVoice) {
@@ -129,54 +402,105 @@ function SentenceBuilder({ selectedVoice, isDarkMode }) {
           {selectedWords.length === 0 ? (
             <span className="sentence-placeholder">Tap words to build a sentence...</span>
           ) : (
-            selectedWords.map((word, index) => (
-              <button
-                key={`${word}-${index}`}
-                className="word-chip"
-                onClick={() => handleRemoveWord(index)}
-                aria-label={`Remove ${word} from sentence`}
-              >
-                {word}
-                <span className="remove-icon">×</span>
-              </button>
-            ))
+            selectedWords.map((word, index) => {
+              const displayText = typeof word === 'string' ? word : word.display
+              return (
+                <button
+                  key={`${displayText}-${index}`}
+                  className="word-chip"
+                  onClick={() => handleRemoveWord(index)}
+                  aria-label={`Remove ${displayText} from sentence`}
+                >
+                  {displayText}
+                  <span className="remove-icon">×</span>
+                </button>
+              )
+            })
           )}
         </div>
       </div>
 
       {/* Category Tabs */}
       <div className="category-tabs">
-        {Object.entries(vocabulary).map(([categoryKey, category]) => (
-          <button
-            key={categoryKey}
-            className={`category-tab ${activeCategory === categoryKey ? 'active' : ''}`}
-            onClick={() => setActiveCategory(categoryKey)}
-            aria-label={`Switch to ${category.label} category`}
-          >
-            <span className="category-icon">{category.icon}</span>
-            <span className="category-label">{category.label}</span>
-          </button>
-        ))}
+        {Object.entries(vocabulary).map(([categoryKey, category]) => {
+          const categoryConfig = getCategoryConfig(categoryKey)
+          const categoryStyle = categoryConfig?.color ? {
+            '--custom-bg': categoryConfig.color,
+            background: categoryConfig.color
+          } : {}
+          
+          return (
+            <button
+              key={categoryKey}
+              className={`category-tab ${activeCategory === categoryKey ? 'active' : ''} ${isEditMode ? 'edit-mode' : ''} ${categoryConfig?.color ? 'custom-config' : ''}`}
+              onClick={() => handleCategoryClick(categoryKey)}
+              aria-label={isEditMode ? `Edit ${category.label} category` : `Switch to ${category.label} category`}
+              style={categoryStyle}
+            >
+              <span className="category-icon">{categoryConfig?.icon || category.icon}</span>
+              <span className="category-label">{categoryConfig?.label || category.label}</span>
+            </button>
+          )
+        })}
       </div>
 
       {/* Word Grid */}
       <div className="word-grid">
-        {currentWords.map((word, index) => (
+        {/* Add New Button - only visible in edit mode */}
+        {isEditMode && (
           <button
-            key={`${word}-${index}`}
-            className="word-button"
-            onClick={() => handleWordClick(word)}
-            aria-label={`Add ${word} to sentence`}
+            key="add-new-word"
+            className="word-button add-new-button"
+            onClick={() => handleAddNewWord()}
+            aria-label="Add new word to this category"
           >
-            {word}
+            <div className="add-new-content">
+              <span className="add-new-icon">+</span>
+              <span className="add-new-text">Add New</span>
+            </div>
           </button>
-        ))}
+        )}
+        
+        {currentWords.map(({ word, index }) => {
+          const wordConfig = getWordConfig(activeCategory, index)
+          const hasCustomConfig = wordConfig && (wordConfig.color || wordConfig.image)
+          
+          // Always apply color - either saved color or random color
+          const buttonColor = wordConfig?.color || getRandomWordColor(word, activeCategory, index)
+          const buttonStyle = {
+            '--custom-bg': buttonColor,
+            background: buttonColor
+          }
+          
+          // Debug logging for image issues
+          if (wordConfig?.image) {
+            console.log(`Word "${word}" has image:`, wordConfig.image)
+            console.log('About to call renderWordImage with:', wordConfig.image)
+          }
+          
+          return (
+            <button
+              key={`${word}-${index}-${refreshKey}`}
+              className={`word-button custom-config ${isEditMode ? 'edit-mode' : ''} ${wordConfig?.image ? 'has-image' : ''}`}
+              onClick={() => handleWordClick(word, activeCategory, index)}
+              aria-label={isEditMode ? `Edit ${word}` : `Add ${word} to sentence`}
+            >
+              <div 
+                className={`pad-content ${wordConfig?.image ? 'has-image' : ''}`}
+                style={buttonStyle}
+              >
+                {wordConfig?.image && renderWordImage(wordConfig.image)}
+                <span className={wordConfig?.image ? 'with-image' : ''}>{wordConfig?.label || word}</span>
+              </div>
+            </button>
+          )
+        })}
       </div>
 
       {/* Controls */}
       <div className="sentence-controls">
         <button
-          className="control-btn play-btn"
+          className="btn btn-success control-btn play-btn"
           onClick={handlePlay}
           disabled={selectedWords.length === 0}
           aria-label="Speak sentence"
@@ -185,7 +509,7 @@ function SentenceBuilder({ selectedVoice, isDarkMode }) {
         </button>
         
         <button
-          className="control-btn backspace-btn"
+          className="btn btn-warning control-btn backspace-btn"
           onClick={handleBackspace}
           disabled={selectedWords.length === 0}
           aria-label="Remove last word"
@@ -194,7 +518,7 @@ function SentenceBuilder({ selectedVoice, isDarkMode }) {
         </button>
         
         <button
-          className="control-btn clear-btn"
+          className="btn btn-danger control-btn clear-btn"
           onClick={handleClear}
           disabled={selectedWords.length === 0}
           aria-label="Clear sentence"

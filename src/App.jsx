@@ -3,17 +3,46 @@ import Grid from './components/Grid'
 import AdminPage from './components/AdminPage'
 import InfoPage from './components/InfoPage'
 import SentenceBuilder from './components/SentenceBuilder'
+import ImageDesigner from './components/ImageDesigner'
+import ButtonConfigModal from './components/ButtonConfigModal'
 import { loadConfig } from './utils/loadConfig'
 import { useAudioPool } from './hooks/useAudioPool'
 
 const DEFAULT_CONFIG_URL = '/config/soundboard.json'
+
+// Color palette for randomizing word button colors
+const WORD_COLORS = [
+  '#10b981', // emerald
+  '#ef4444', // red
+  '#3b82f6', // blue
+  '#f59e0b', // amber
+  '#8b5cf6', // violet
+  '#06b6d4', // cyan
+  '#ec4899', // pink
+  '#84cc16', // lime
+  '#f97316', // orange
+  '#6366f1', // indigo
+  '#14b8a6', // teal
+  '#a855f7', // purple
+  '#22d3ee', // sky
+  '#fb7185', // rose
+  '#facc15', // yellow
+  '#16a34a', // green
+]
+
+// Function to get a random color for word buttons
+const getRandomWordColor = (word, categoryKey, wordIndex) => {
+  // Use the word index to cycle through colors, creating variety within each category
+  const colorIndex = wordIndex % WORD_COLORS.length
+  return WORD_COLORS[colorIndex]
+}
 
 function App() {
   const [config, setConfig] = useState(null)
   const [error, setError] = useState(null)
   const [volume, setVolume] = useState(() => {
     const saved = localStorage.getItem('soundboard-volume')
-    return saved ? parseFloat(saved) : 0.7
+    return saved ? parseFloat(saved) : 1.0
   })
   const [selectedLanguage, setSelectedLanguage] = useState(() => {
     return localStorage.getItem('soundboard-language') || 'en'
@@ -37,18 +66,46 @@ function App() {
     const dismissed = localStorage.getItem('open-speech-builder-tooltip-dismissed')
     return !dismissed
   })
+  const [isEditMode, setIsEditMode] = useState(false)
+  const [editingPad, setEditingPad] = useState(null)
+  const [sentenceBuilderCategories, setSentenceBuilderCategories] = useState(null)
   const fileInputRef = useRef(null)
   const { playPad, setGlobalVolume } = useAudioPool()
 
+  // Get theme-appropriate default color
+  const getThemeDefaultColor = () => {
+    return isDarkMode ? '#f3f4f6' : '#1f2937' // Light gray for dark theme, dark gray for light theme
+  }
+
   // Load initial config
   useEffect(() => {
+    // First check if we have a saved config in localStorage
+    const savedConfig = localStorage.getItem('soundboard-config-data')
+    if (savedConfig) {
+      try {
+        const configData = JSON.parse(savedConfig)
+        setConfig(configData)
+        return
+      } catch (err) {
+        console.error('Failed to parse saved config:', err)
+        // Fall back to loading from URL if saved config is invalid
+      }
+    }
+
+    // Load from URL if no saved config
     const urlParams = new URLSearchParams(window.location.search)
     const configUrl = urlParams.get('config') ||
       localStorage.getItem('soundboard-config-url') ||
       DEFAULT_CONFIG_URL
 
     loadConfig(configUrl)
-      .then(setConfig)
+      .then(loadedConfig => {
+        setConfig(loadedConfig)
+        // Also save image library to localStorage for ImageDesigner
+        if (loadedConfig.imageLibrary) {
+          localStorage.setItem('image-designer-library', JSON.stringify(loadedConfig.imageLibrary))
+        }
+      })
       .catch(err => {
         console.error('Failed to load config:', err)
         setError(`Failed to load config: ${err.message}`)
@@ -178,48 +235,7 @@ function App() {
     return names[code] || code.toUpperCase()
   }
 
-  // Keyboard event handler
-  useEffect(() => {
-    if (!config) return
 
-    const keyMap = {}
-    config.pads.forEach((pad, index) => {
-      if (pad && pad.key) {
-        keyMap[pad.key.toLowerCase()] = pad
-      } else {
-        // Default key mapping: 1234/QWER/ASDF/ZXCV
-        const defaultKeys = ['1', '2', '3', '4', 'q', 'w', 'e', 'r', 'a', 's', 'd', 'f', 'z', 'x', 'c', 'v']
-        if (defaultKeys[index]) {
-          keyMap[defaultKeys[index]] = pad
-        }
-      }
-    })
-
-    const handleKeyDown = (event) => {
-      // Don't trigger keyboard shortcuts when admin panel is open
-      if (showAdmin) return
-      
-      // Don't trigger if user is typing in an input/textarea
-      const activeElement = document.activeElement
-      if (activeElement && (
-        activeElement.tagName === 'INPUT' || 
-        activeElement.tagName === 'TEXTAREA' ||
-        activeElement.contentEditable === 'true'
-      )) {
-        return
-      }
-
-      const key = event.key.toLowerCase()
-      const pad = keyMap[key]
-      if (pad && pad.sound && !event.repeat) {
-        event.preventDefault()
-        handlePadPlay(pad)
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [config, showAdmin])
 
   const handlePadPlay = (pad) => {
     if (!pad.sound) return
@@ -248,13 +264,15 @@ function App() {
     reader.onload = (e) => {
       try {
         const configData = JSON.parse(e.target.result)
+        
+        // Save to localStorage for persistence
+        localStorage.setItem('soundboard-config-data', JSON.stringify(configData))
+        localStorage.setItem('soundboard-config-url', 'local-file')
+        
         setConfig(configData)
         setError(null)
         setStatusMessage('Config loaded successfully!')
         setTimeout(() => setStatusMessage(''), 2000)
-
-        // Save to localStorage for persistence
-        localStorage.setItem('soundboard-config-url', 'local-file')
       } catch (err) {
         setError(`Invalid JSON file: ${err.message}`)
         setTimeout(() => setError(null), 5000)
@@ -267,6 +285,14 @@ function App() {
   }
 
   const handleConfigUpdate = (newConfig) => {
+    // Save to localStorage for persistence
+    localStorage.setItem('soundboard-config-data', JSON.stringify(newConfig))
+    
+    // Also save image library separately for ImageDesigner
+    if (newConfig.imageLibrary) {
+      localStorage.setItem('image-designer-library', JSON.stringify(newConfig.imageLibrary))
+    }
+    
     setConfig(newConfig)
     setStatusMessage('Configuration updated!')
     setTimeout(() => setStatusMessage(''), 2000)
@@ -284,7 +310,16 @@ function App() {
 
   const handleViewToggle = () => {
     if (currentView === 'landing') return // Don't toggle from landing page
-    setCurrentView(currentView === 'soundboard' ? 'sentence-builder' : 'soundboard')
+    
+    // Cycle through the three views: soundboard -> sentence-builder -> image-designer -> soundboard
+    if (currentView === 'soundboard') {
+      setCurrentView('sentence-builder')
+    } else if (currentView === 'sentence-builder') {
+      setCurrentView('image-designer')
+    } else {
+      setCurrentView('soundboard')
+    }
+    
     setShowMenu(false) // Close menu when switching views
   }
 
@@ -322,6 +357,7 @@ function App() {
       localStorage.removeItem('soundboard-voice')
       localStorage.removeItem('soundboard-volume')
       localStorage.removeItem('soundboard-config-url')
+      localStorage.removeItem('soundboard-config-data')
       localStorage.removeItem('sentence-builder-last')
       localStorage.removeItem('myvoice-tooltip-dismissed')
       
@@ -329,7 +365,7 @@ function App() {
       setIsDarkMode(true) // Default to dark mode
       setSelectedLanguage('en')
       setSelectedVoice('')
-      setVolume(0.7)
+      setVolume(1.0)
       setShowViewTips(true)
       setCurrentView('landing')
       setShowMenu(false)
@@ -340,22 +376,308 @@ function App() {
     }
   }
 
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (event) => {
-      if (event.ctrlKey && event.shiftKey && event.key === 'A') {
-        event.preventDefault()
-        setShowAdmin(!showAdmin)
+  const handlePadEdit = (padIndex) => {
+    if (!isEditMode) return
+    
+    const pad = config.pads[padIndex] || {
+      id: `pad-${padIndex + 1}`,
+      label: '',
+      sound: '',
+      color: getThemeDefaultColor(),
+      key: '',
+      image: null
+    }
+    
+    setEditingPad({ ...pad, index: padIndex })
+  }
+
+  const handleWordEdit = (categoryKey, wordIndex, word) => {
+    if (!isEditMode) return
+    
+    // Small delay to ensure any previous saves have completed
+    setTimeout(() => {
+      // Load existing word configuration if it exists
+      const savedWords = localStorage.getItem('sentence-builder-words')
+      const wordConfigs = savedWords ? JSON.parse(savedWords) : {}
+      const wordKey = `${categoryKey}-${wordIndex}`
+      const existingConfig = wordConfigs[wordKey]
+      
+      // Create a word button configuration, using existing config if available
+      const wordButton = {
+        id: `word-${categoryKey}-${wordIndex}`,
+        label: existingConfig?.label || word || '', // Use saved label or default to word
+        sound: existingConfig?.sound || (word ? `tts:${word}` : 'tts:New Word'), // Use saved TTS or default
+        color: existingConfig?.color || getRandomWordColor(word || 'new-word', categoryKey, wordIndex),
+        key: existingConfig?.key || '',
+        image: existingConfig?.image || null,
+        order: existingConfig?.order || '',
+        category: categoryKey,
+        originalCategory: categoryKey, // Store original category for change detection
+        wordIndex: wordIndex,
+        originalWordIndex: wordIndex, // Store original index
+        isNewWord: word === null // Flag to indicate this is a new word
       }
-      if (event.ctrlKey && event.shiftKey && event.key === 'I') {
-        event.preventDefault()
-        setShowInfo(!showInfo)
+      
+      console.log('handleWordEdit - Existing config:', existingConfig)
+      console.log('handleWordEdit - Word button:', wordButton)
+      
+      setEditingPad(wordButton)
+    }, 50) // Small delay to ensure localStorage is updated
+  }
+
+  const handleCategoryEdit = (categoryKey) => {
+    if (!isEditMode) return
+    
+    // Load existing category configuration if it exists
+    const savedCategories = localStorage.getItem('sentence-builder-categories')
+    const categoryConfigs = savedCategories ? JSON.parse(savedCategories) : {}
+    const existingConfig = categoryConfigs[categoryKey]
+    
+    // Get the base category info
+    const baseCategory = sentenceBuilderCategories?.[categoryKey]
+    
+    // Create a category button configuration
+    const categoryButton = {
+      id: `category-${categoryKey}`,
+      label: existingConfig?.label || baseCategory?.label || categoryKey,
+      sound: existingConfig?.sound || `tts:${baseCategory?.label || categoryKey}`,
+      color: existingConfig?.color || getThemeDefaultColor(),
+      key: existingConfig?.key || '',
+      image: existingConfig?.image || null,
+      order: existingConfig?.order || '',
+      icon: existingConfig?.icon || baseCategory?.icon || '📁',
+      categoryKey: categoryKey,
+      isCategory: true // Flag to indicate this is a category
+    }
+    
+    setEditingPad(categoryButton)
+  }
+
+  const handlePadUpdate = (updatedPad) => {
+    // Check if this is a category button
+    if (updatedPad.isCategory) {
+      // Handle category configuration update
+      const savedCategories = localStorage.getItem('sentence-builder-categories')
+      const categoryConfigs = savedCategories ? JSON.parse(savedCategories) : {}
+      
+      const categoryConfig = {
+        label: updatedPad.label,
+        sound: updatedPad.sound,
+        color: updatedPad.color,
+        image: updatedPad.image,
+        order: updatedPad.order,
+        icon: updatedPad.icon
       }
+      
+      categoryConfigs[updatedPad.categoryKey] = categoryConfig
+      localStorage.setItem('sentence-builder-categories', JSON.stringify(categoryConfigs))
+      
+      // Trigger reload of sentence builder
+      if (window.reloadSentenceBuilderConfigs) {
+        window.reloadSentenceBuilderConfigs()
+      }
+      
+      setEditingPad(null)
+      setStatusMessage('Category updated successfully!')
+      setTimeout(() => setStatusMessage(''), 2000)
+      return
     }
 
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [showAdmin, showInfo])
+    // Check if this is a word button (has category and wordIndex)
+    if (updatedPad.category && updatedPad.wordIndex !== undefined) {
+      // Handle word button update - save to separate localStorage
+      const savedWords = localStorage.getItem('sentence-builder-words')
+      const wordConfigs = savedWords ? JSON.parse(savedWords) : {}
+      
+      // Handle new word creation
+      if (updatedPad.isNewWord) {
+        // Add to custom vocabulary
+        const savedCustomWords = localStorage.getItem('sentence-builder-custom-words')
+        const customWords = savedCustomWords ? JSON.parse(savedCustomWords) : {}
+        
+        if (!customWords[updatedPad.category]) {
+          customWords[updatedPad.category] = []
+        }
+        
+        // Add the new word to the category
+        customWords[updatedPad.category].push(updatedPad.label)
+        localStorage.setItem('sentence-builder-custom-words', JSON.stringify(customWords))
+        
+        // Update the word index to be the correct position in the expanded vocabulary
+        updatedPad.wordIndex = customWords[updatedPad.category].length - 1 + 1000 // Offset to avoid conflicts
+      }
+      
+      // Handle category changes
+      const originalCategory = updatedPad.originalCategory || updatedPad.category
+      const newCategory = updatedPad.category
+      
+      // Save the configuration first
+      const wordKey = `${updatedPad.category}-${updatedPad.wordIndex}`
+      const configToSave = {
+        label: updatedPad.label,
+        sound: updatedPad.sound,
+        color: updatedPad.color,
+        image: updatedPad.image,
+        order: updatedPad.order
+      }
+      
+      if (originalCategory !== newCategory && !updatedPad.isNewWord) {
+        // Category changed - move word to new category
+        const savedCustomWords = localStorage.getItem('sentence-builder-custom-words')
+        const customWords = savedCustomWords ? JSON.parse(savedCustomWords) : {}
+        
+        // Initialize new category if it doesn't exist
+        if (!customWords[newCategory]) {
+          customWords[newCategory] = []
+        }
+        
+        // Check if word already exists in new category to prevent duplicates
+        let wordPositionInCustomWords = customWords[newCategory].indexOf(updatedPad.label)
+        
+        if (wordPositionInCustomWords === -1) {
+          // Word doesn't exist, add it to the new category
+          customWords[newCategory].push(updatedPad.label)
+          wordPositionInCustomWords = customWords[newCategory].length - 1
+        }
+        // If word already exists, wordPositionInCustomWords will be its current position
+        
+        // Remove word from original category if it's in custom words
+        if (customWords[originalCategory]) {
+          const wordIndex = customWords[originalCategory].indexOf(updatedPad.label)
+          if (wordIndex > -1) {
+            customWords[originalCategory].splice(wordIndex, 1)
+            // Clean up empty categories
+            if (customWords[originalCategory].length === 0) {
+              delete customWords[originalCategory]
+            }
+          }
+        }
+        
+        localStorage.setItem('sentence-builder-custom-words', JSON.stringify(customWords))
+        
+        // Calculate new word index based on how SentenceBuilder merges words
+        // Custom words are appended after base vocabulary words
+        const baseVocabulary = sentenceBuilderCategories?.[newCategory]?.words || []
+        const baseVocabularyLength = baseVocabulary.length
+        const newWordIndex = baseVocabularyLength + wordPositionInCustomWords
+        const newWordKey = `${newCategory}-${newWordIndex}`
+        
+
+        
+        // Save config with new key
+        wordConfigs[newWordKey] = configToSave
+        
+        // Remove old configuration
+        const oldWordKey = `${originalCategory}-${updatedPad.originalWordIndex}`
+        delete wordConfigs[oldWordKey]
+      } else {
+        // No category change, save normally
+        wordConfigs[wordKey] = configToSave
+      }
+      
+      localStorage.setItem('sentence-builder-words', JSON.stringify(wordConfigs))
+      
+      // Trigger reload of word configurations in SentenceBuilder
+      if (window.reloadSentenceBuilderConfigs) {
+        window.reloadSentenceBuilderConfigs()
+      }
+      
+      // Debug: Verify the configuration was saved correctly
+      setTimeout(() => {
+        const savedConfigs = JSON.parse(localStorage.getItem('sentence-builder-words') || '{}')
+        console.log('Verification - configs in localStorage after save:', savedConfigs)
+        
+        // Look for the specific config we just saved
+        Object.keys(savedConfigs).forEach(key => {
+          const config = savedConfigs[key]
+          if (config.image || (config.color && config.color !== getThemeDefaultColor())) {
+            console.log(`Found non-default config: ${key}`, config)
+          }
+        })
+      }, 100)
+      
+      setEditingPad(null)
+      setStatusMessage(updatedPad.isNewWord ? 'New word added successfully!' : 'Word button updated successfully!')
+      setTimeout(() => setStatusMessage(''), 2000)
+      return
+    }
+    
+    // Handle regular soundboard pad update
+    const newConfig = { ...config }
+    
+    // Ensure pads array is large enough
+    while (newConfig.pads.length <= updatedPad.index) {
+      newConfig.pads.push({
+        id: `pad-${newConfig.pads.length + 1}`,
+        label: '',
+        sound: '',
+        color: getThemeDefaultColor(),
+        key: '',
+        image: null
+      })
+    }
+    
+    // Update the specific pad
+    newConfig.pads[updatedPad.index] = {
+      id: updatedPad.id,
+      label: updatedPad.label,
+      sound: updatedPad.sound,
+      color: updatedPad.color,
+      key: updatedPad.key,
+      image: updatedPad.image,
+      order: updatedPad.order
+    }
+    
+    // Save to localStorage for persistence
+    localStorage.setItem('soundboard-config-data', JSON.stringify(newConfig))
+    
+    setConfig(newConfig)
+    setEditingPad(null)
+    setStatusMessage('Button updated successfully!')
+    setTimeout(() => setStatusMessage(''), 2000)
+  }
+
+  const handleSaveConfig = () => {
+    const configData = JSON.stringify(config, null, 2)
+    const blob = new Blob([configData], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'soundboard-config.json'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+    
+    setStatusMessage('Configuration saved!')
+    setTimeout(() => setStatusMessage(''), 2000)
+  }
+
+  const handleResetConfig = () => {
+    const confirmed = window.confirm(
+      'Are you sure you want to reset to the default configuration? This will remove all your custom button settings.'
+    )
+    
+    if (confirmed) {
+      // Clear saved configuration
+      localStorage.removeItem('soundboard-config-data')
+      localStorage.removeItem('soundboard-config-url')
+      
+      // Reload default configuration
+      loadConfig(DEFAULT_CONFIG_URL)
+        .then(setConfig)
+        .catch(err => {
+          console.error('Failed to load default config:', err)
+          setError(`Failed to load default config: ${err.message}`)
+        })
+      
+      setStatusMessage('Configuration reset to default!')
+      setTimeout(() => setStatusMessage(''), 2000)
+    }
+  }
+
+
 
   if (!config) {
     return (
@@ -371,31 +693,46 @@ function App() {
   return (
     <div className="app">
       <div className="header">
-        {currentView !== 'landing' && (
-          <button
-            onClick={handleMenuToggle}
-            className="menu-btn"
-            aria-label="Open menu"
-          >
-            <div className="hamburger">
-              <span></span>
-              <span></span>
-              <span></span>
-            </div>
-          </button>
-        )}
+        <button
+          onClick={handleMenuToggle}
+          className="btn btn-ghost btn-icon menu-btn"
+          aria-label="Open menu"
+        >
+          <div className="hamburger">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        </button>
         
         <h1 className="title">Open Speech Builder</h1>
 
         <div className="header-controls">
+          {(currentView === 'soundboard' || currentView === 'sentence-builder') && (
+            <>
+              <button
+                onClick={() => setIsEditMode(!isEditMode)}
+                className={`btn btn-ghost btn-icon edit-toggle ${isEditMode ? 'active' : ''}`}
+                aria-label={`${isEditMode ? 'Exit' : 'Enter'} edit mode`}
+              >
+                {isEditMode ? '✅' : '✏️'}
+              </button>
+
+            </>
+          )}
+          
           {currentView !== 'landing' && (
             <div className="view-toggle-container">
               <button
                 onClick={handleViewToggle}
-                className="view-toggle"
-                aria-label={`Switch to ${currentView === 'soundboard' ? 'sentence builder' : 'soundboard'}`}
+                className="btn btn-ghost btn-icon view-toggle"
+                aria-label={`Switch to ${
+                  currentView === 'soundboard' ? 'sentence builder' : 
+                  currentView === 'sentence-builder' ? 'image designer' : 'soundboard'
+                }`}
               >
-                {currentView === 'soundboard' ? '📝' : '🔊'}
+                {currentView === 'soundboard' ? '📝' : 
+                 currentView === 'sentence-builder' ? '🎨' : '🔊'}
               </button>
               
               {/* Tooltip positioned relative to button */}
@@ -419,7 +756,7 @@ function App() {
           
           <button
             onClick={handleThemeToggle}
-            className="theme-toggle"
+            className="btn btn-ghost btn-icon theme-toggle"
             aria-label={`Switch to ${isDarkMode ? 'light' : 'dark'} mode`}
           >
             {isDarkMode ? '☀️' : '🌙'}
@@ -441,7 +778,7 @@ function App() {
       <div className={`slide-menu ${showMenu ? 'open' : ''}`}>
         <div className="menu-header">
           <h2>Menu</h2>
-          <button onClick={handleMenuToggle} className="close-menu-btn" aria-label="Close menu">
+          <button onClick={handleMenuToggle} className="btn btn-ghost btn-icon btn-sm close-menu-btn" aria-label="Close menu">
             ×
           </button>
         </div>
@@ -449,14 +786,15 @@ function App() {
         <div className="menu-content">
           <div className="menu-section">
             <h3>Navigation</h3>
-            <button onClick={handleInfoToggle} className="menu-item">
+            <button onClick={handleInfoToggle} className="btn btn-outline btn-block menu-item">
               📖 Info
             </button>
-            <button onClick={handleAdminToggle} className="menu-item">
+            <button onClick={handleAdminToggle} className="btn btn-outline btn-block menu-item">
               ⚙️ Admin
             </button>
-            <button onClick={handleViewToggle} className="menu-item">
-              {currentView === 'soundboard' ? '📝 Sentence Builder' : '🔊 Soundboard'}
+            <button onClick={handleViewToggle} className="btn btn-outline btn-block menu-item">
+              {currentView === 'soundboard' ? '📝 Sentence Builder' : 
+               currentView === 'sentence-builder' ? '🎨 Image Designer' : '🔊 Soundboard'}
             </button>
           </div>
 
@@ -554,21 +892,57 @@ function App() {
                   <p>Build custom sentences word by word</p>
                 </div>
               </button>
+              
+              <button
+                onClick={() => handleLandingChoice('image-designer')}
+                className="landing-btn image-designer-btn"
+                aria-label="Go to Image Designer"
+              >
+                <div className="landing-btn-icon">🎨</div>
+                <div className="landing-btn-content">
+                  <h3>Image Designer</h3>
+                  <p>Create custom 16x16 pixel icons for your buttons</p>
+                </div>
+              </button>
             </div>
             
             <div className="landing-tip">
-              <p>💡 <strong>Tip:</strong> You can switch between views anytime using the toggle button in the top right corner</p>
+              <p>💡 <strong>Tip:</strong> You can cycle between all three views anytime using the toggle button in the top right corner</p>
             </div>
           </div>
         </div>
       ) : currentView === 'soundboard' ? (
-        <Grid
-          config={config}
-          onPadPlay={handlePadPlay}
-        />
+        <>
+          {isEditMode && (
+            <div className="edit-mode-banner">
+              ✏️ Edit Mode Active - Click any button to configure it
+            </div>
+          )}
+          <Grid
+            config={config}
+            onPadPlay={handlePadPlay}
+            isEditMode={isEditMode}
+            onPadEdit={handlePadEdit}
+          />
+        </>
+      ) : currentView === 'sentence-builder' ? (
+        <>
+          {isEditMode && (
+            <div className="edit-mode-banner">
+              ✏️ Edit Mode Active - Click any word to configure it
+            </div>
+          )}
+          <SentenceBuilder
+            selectedVoice={selectedVoice}
+            isDarkMode={isDarkMode}
+            isEditMode={isEditMode}
+            onWordEdit={handleWordEdit}
+            onCategoriesReady={setSentenceBuilderCategories}
+            onCategoryEdit={handleCategoryEdit}
+          />
+        </>
       ) : (
-        <SentenceBuilder
-          selectedVoice={selectedVoice}
+        <ImageDesigner
           isDarkMode={isDarkMode}
         />
       )}
@@ -590,6 +964,7 @@ function App() {
           selectedVoice={selectedVoice}
           isDarkMode={isDarkMode}
           onResetSettings={handleResetSettings}
+          onResetConfig={handleResetConfig}
         />
       )}
 
@@ -600,6 +975,15 @@ function App() {
         />
       )}
 
+      {editingPad && (
+        <ButtonConfigModal
+          pad={editingPad}
+          onSave={handlePadUpdate}
+          onClose={() => setEditingPad(null)}
+          categories={editingPad?.category ? sentenceBuilderCategories : null}
+          isDarkMode={isDarkMode}
+        />
+      )}
 
     </div>
   )
