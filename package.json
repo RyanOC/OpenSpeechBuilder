@@ -3,6 +3,14 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "license": "MIT",
+  "description": "A web-based Augmentative and Alternative Communication (AAC) soundboard with customizable buttons, sentence builder, and image designer",
+  "keywords": ["aac", "soundboard", "accessibility", "communication", "speech", "assistive-technology"],
+  "author": "Open Speech Builder Contributors",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/open-speech-builder.git"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
