@@ -33,7 +33,6 @@ function Grid({ config, onPadPlay, isEditMode, onPadEdit }) {
     return pad || {
       id: `empty-${index}`,
       label: '',
-      image: null,
       sound: null,
       color: '#2a2a2a',
       key: null

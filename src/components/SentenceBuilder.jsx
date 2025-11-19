@@ -69,89 +69,6 @@ function SentenceBuilder({ selectedVoice, isDarkMode, isEditMode, onWordEdit, on
     return categoryConfigs[categoryKey] || null
   }
 
-  // Function to render word images (similar to Pad component)
-  const renderWordImage = (imageIdOrData) => {
-    console.log('renderWordImage called with:', imageIdOrData)
-    let imageData
-    
-    // Handle both old format (full image object) and new format (image ID)
-    if (typeof imageIdOrData === 'string') {
-      // New format: image ID
-      console.log('Looking for image ID:', imageIdOrData)
-      const saved = localStorage.getItem('image-designer-library')
-      console.log('Image library exists:', !!saved)
-      
-      if (!saved) {
-        console.log('No image library in localStorage')
-        return null
-      }
-      
-      let imageLibrary
-      try {
-        imageLibrary = JSON.parse(saved)
-        console.log('Available image IDs:', Object.keys(imageLibrary))
-      } catch (err) {
-        console.log('Error parsing image library:', err)
-        return null
-      }
-      
-      imageData = imageLibrary[imageIdOrData]
-      console.log('Found image data:', !!imageData)
-    } else if (imageIdOrData && imageIdOrData.data) {
-      // Old format: full image object
-      imageData = imageIdOrData
-      console.log('Using direct image data')
-    }
-    
-    if (!imageData || !imageData.data) {
-      console.log('No image data found for:', imageIdOrData)
-      return null
-    }
-    
-    console.log('Rendering image with data:', imageData)
-
-    return (
-      <div
-        className="pad-image"
-        style={{
-          width: 'calc(100% - 20px)',
-          height: 'calc(100% - 24px)',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(16, 1fr)',
-          gridTemplateRows: 'repeat(16, 1fr)',
-          gap: 0,
-          position: 'absolute',
-          top: '8px',
-          left: '10px'
-        }}
-      >
-        {imageData.data.flat().map((pixel, index) => {
-          let pixelColor = 'transparent'
-          if (pixel) {
-            // Handle both formats: 1/0 (starter images) and hex colors (new images)
-            if (pixel === 1) {
-              pixelColor = '#000000' // Black for starter images
-            } else if (typeof pixel === 'string' && pixel.startsWith('#')) {
-              pixelColor = pixel // Use the actual color
-            } else {
-              pixelColor = '#000000' // Default to black
-            }
-          }
-          
-          return (
-            <div
-              key={index}
-              className="image-pixel"
-              style={{
-                backgroundColor: pixelColor
-              }}
-            />
-          )
-        })}
-      </div>
-    )
-  }
-
   // Load custom words and merge with base vocabulary
   const getVocabulary = () => {
     const baseVocabulary = {
@@ -331,8 +248,9 @@ function SentenceBuilder({ selectedVoice, isDarkMode, isEditMode, onWordEdit, on
       
       // Extract TTS text from sound configuration
       let ttsText = displayText // Default to display text
-      if (wordConfig?.sound && wordConfig.sound.startsWith('tts:')) {
-        ttsText = wordConfig.sound.substring(4) // Remove 'tts:' prefix
+      if (wordConfig?.sound) {
+        // Remove 'tts:' prefix if it exists (for backwards compatibility)
+        ttsText = wordConfig.sound.startsWith('tts:') ? wordConfig.sound.substring(4) : wordConfig.sound
       }
       
       // Store word object with both display and TTS text
@@ -463,8 +381,6 @@ function SentenceBuilder({ selectedVoice, isDarkMode, isEditMode, onWordEdit, on
         
         {currentWords.map(({ word, index }) => {
           const wordConfig = getWordConfig(activeCategory, index)
-          const hasCustomConfig = wordConfig && (wordConfig.color || wordConfig.image)
-          
           // Always apply color - either saved color or random color
           const buttonColor = wordConfig?.color || getRandomWordColor(word, activeCategory, index)
           const buttonStyle = {
@@ -472,25 +388,18 @@ function SentenceBuilder({ selectedVoice, isDarkMode, isEditMode, onWordEdit, on
             background: buttonColor
           }
           
-          // Debug logging for image issues
-          if (wordConfig?.image) {
-            console.log(`Word "${word}" has image:`, wordConfig.image)
-            console.log('About to call renderWordImage with:', wordConfig.image)
-          }
-          
           return (
             <button
               key={`${word}-${index}-${refreshKey}`}
-              className={`word-button custom-config ${isEditMode ? 'edit-mode' : ''} ${wordConfig?.image ? 'has-image' : ''}`}
+              className={`word-button custom-config ${isEditMode ? 'edit-mode' : ''}`}
               onClick={() => handleWordClick(word, activeCategory, index)}
               aria-label={isEditMode ? `Edit ${word}` : `Add ${word} to sentence`}
             >
               <div 
-                className={`pad-content ${wordConfig?.image ? 'has-image' : ''}`}
+                className="pad-content"
                 style={buttonStyle}
               >
-                {wordConfig?.image && renderWordImage(wordConfig.image)}
-                <span className={wordConfig?.image ? 'with-image' : ''}>{wordConfig?.label || word}</span>
+                <span>{wordConfig?.label || word}</span>
               </div>
             </button>
           )

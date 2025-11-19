@@ -66,72 +66,6 @@ function Pad({ pad, onPlay, onEdit, isEditMode, gridPosition }) {
     background: pad.color || '#6366f1'
   }
 
-  const renderImage = (imageIdOrData) => {
-    let imageData
-
-    // Handle both old format (full image object) and new format (image ID)
-    if (typeof imageIdOrData === 'string') {
-      // New format: image ID
-      const saved = localStorage.getItem('image-designer-library')
-      if (!saved) return null
-
-      let imageLibrary
-      try {
-        imageLibrary = JSON.parse(saved)
-      } catch (err) {
-        return null
-      }
-
-      imageData = imageLibrary[imageIdOrData]
-    } else if (imageIdOrData && imageIdOrData.data) {
-      // Old format: full image object
-      imageData = imageIdOrData
-    }
-
-    if (!imageData || !imageData.data) return null
-
-    return (
-      <div
-        className="pad-image"
-        style={{
-          width: 'calc(100% - 20px)',
-          height: 'calc(100% - 24px)',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(16, 1fr)',
-          gridTemplateRows: 'repeat(16, 1fr)',
-          gap: 0,
-          position: 'absolute',
-          top: '8px',
-          left: '10px'
-        }}
-      >
-        {imageData.data.flat().map((pixel, index) => {
-          let pixelColor = 'transparent'
-          if (pixel) {
-            // Handle both formats: 1/0 (starter images) and hex colors (new images)
-            if (pixel === 1) {
-              pixelColor = '#000000' // Black for starter images
-            } else if (typeof pixel === 'string' && pixel.startsWith('#')) {
-              pixelColor = pixel // Use the actual color
-            } else {
-              pixelColor = '#000000' // Default to black
-            }
-          }
-
-          return (
-            <div
-              key={index}
-              className="image-pixel"
-              style={{
-                backgroundColor: pixelColor
-              }}
-            />
-          )
-        })}
-      </div>
-    )
-  }
-
   return (
     <button
       className={`pad ${isPlaying ? 'playing' : ''} ${isDisabled && !isEditMode ? 'disabled' : ''}`}
@@ -145,26 +79,39 @@ function Pad({ pad, onPlay, onEdit, isEditMode, gridPosition }) {
       tabIndex={isDisabled && !isEditMode ? -1 : 0}
     >
       <div
-        className={`pad-content ${pad.image ? 'has-image' : ''} ${shouldUseEmojiLayout(pad.label) ? 'has-emoji' : ''}`}
+        className={`pad-content ${shouldUseEmojiLayout(pad.label) ? 'has-emoji' : ''}`}
         style={contentStyle}
       >
-        {pad.image && renderImage(pad.image)}
         {pad.label && (() => {
           const { emoji, text } = parseEmojiAndText(pad.label)
           
           if (emoji) {
-            // Emoji + text layout (similar to image layout)
+            // Emoji + text layout
             return (
               <>
                 <div className="pad-emoji">{emoji}</div>
-                {text && <span className="emoji-text">{text}</span>}
+                {text && (
+                  <span className="emoji-text">
+                    {text.split('\n').map((line, i) => (
+                      <span key={i}>
+                        {line}
+                        {i < text.split('\n').length - 1 && <br />}
+                      </span>
+                    ))}
+                  </span>
+                )}
               </>
             )
           } else {
-            // Regular text layout
+            // Regular text layout - preserve line breaks
             return (
-              <span className={pad.image ? 'with-image' : ''}>
-                {pad.label}
+              <span>
+                {pad.label.split('\n').map((line, i) => (
+                  <span key={i}>
+                    {line}
+                    {i < pad.label.split('\n').length - 1 && <br />}
+                  </span>
+                ))}
               </span>
             )
           }

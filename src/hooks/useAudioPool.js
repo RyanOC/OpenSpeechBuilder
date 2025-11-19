@@ -104,15 +104,18 @@ export function useAudioPool() {
 
   const playPad = useCallback(async (padId, soundUrl, voiceName = null) => {
     try {
-      // Check if this is a TTS sound
-      if (soundUrl && soundUrl.startsWith('tts:')) {
-        const text = soundUrl.replace('tts:', '')
-        return playTTS(text, voiceName)
-      }
-      
-      // Skip if no sound URL or invalid URL
+      // Skip if no sound URL
       if (!soundUrl || soundUrl === null) {
         throw new Error('No sound configured for this pad')
+      }
+      
+      // Check if this is a TTS sound (with or without tts: prefix)
+      // If it doesn't look like a URL, treat it as TTS text
+      const isTTS = soundUrl.startsWith('tts:') || !soundUrl.match(/^https?:\/\/|^\/|^\.\//i)
+      
+      if (isTTS) {
+        const text = soundUrl.startsWith('tts:') ? soundUrl.replace('tts:', '') : soundUrl
+        return playTTS(text, voiceName)
       }
       const audio = getOrCreateAudio(padId, soundUrl)
       

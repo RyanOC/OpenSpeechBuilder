@@ -5,9 +5,47 @@ function AdminPage({ config, onConfigUpdate, onClose, onLoadConfig, selectedVoic
   const [error, setError] = useState('')
   const [testText, setTestText] = useState('Hello, this is a test')
 
+  // Helper to build full config object
+  const buildFullConfig = () => {
+    const customWords = JSON.parse(localStorage.getItem('sentence-builder-custom-words') || '{}')
+    const wordConfigs = JSON.parse(localStorage.getItem('sentence-builder-words') || '{}')
+    const categoryConfigs = JSON.parse(localStorage.getItem('sentence-builder-categories') || '{}')
+    
+    const customWordCount = Object.values(customWords).reduce((sum, words) => sum + words.length, 0)
+    const wordConfigCount = Object.keys(wordConfigs).length
+    const categoryConfigCount = Object.keys(categoryConfigs).length
+    
+    return {
+      _readme: {
+        description: "Open Speech Builder - Full Configuration",
+        lastUpdated: new Date().toISOString(),
+        version: "1.0",
+        contents: {
+          soundboardButtons: config?.pads?.length || 0,
+          customWords: customWordCount,
+          wordCustomizations: wordConfigCount,
+          categoryCustomizations: categoryConfigCount
+        }
+      },
+      soundboard: config,
+      sentenceBuilder: {
+        words: wordConfigs,
+        customWords: customWords,
+        categories: categoryConfigs
+      },
+      settings: {
+        volume: localStorage.getItem('soundboard-volume') || '1.0',
+        language: localStorage.getItem('soundboard-language') || 'en',
+        voice: localStorage.getItem('soundboard-voice') || '',
+        theme: localStorage.getItem('soundboard-theme') || 'dark'
+      }
+    }
+  }
+
   useEffect(() => {
     if (config) {
-      setJsonText(JSON.stringify(config, null, 2))
+      const fullConfig = buildFullConfig()
+      setJsonText(JSON.stringify(fullConfig, null, 2))
     }
   }, [config])
 
@@ -15,40 +53,56 @@ function AdminPage({ config, onConfigUpdate, onClose, onLoadConfig, selectedVoic
 
   const handleSave = () => {
     try {
-      const newConfig = JSON.parse(jsonText)
+      const fullConfig = JSON.parse(jsonText)
       
       // Basic validation
-      if (!newConfig || typeof newConfig !== 'object') {
+      if (!fullConfig || typeof fullConfig !== 'object') {
         throw new Error('Config must be a valid JSON object')
       }
       
-      if (!Array.isArray(newConfig.pads)) {
-        throw new Error('Config must have a pads array')
+      // Check if this is a full config or legacy soundboard-only config
+      if (fullConfig.soundboard) {
+        // Full config format
+        if (!fullConfig.soundboard.pads || !Array.isArray(fullConfig.soundboard.pads)) {
+          throw new Error('Soundboard config must have a pads array')
+        }
+        
+        // Save soundboard config
+        onConfigUpdate(fullConfig.soundboard)
+        
+        // Save sentence builder data
+        if (fullConfig.sentenceBuilder) {
+          localStorage.setItem('sentence-builder-words', JSON.stringify(fullConfig.sentenceBuilder.words || {}))
+          localStorage.setItem('sentence-builder-custom-words', JSON.stringify(fullConfig.sentenceBuilder.customWords || {}))
+          localStorage.setItem('sentence-builder-categories', JSON.stringify(fullConfig.sentenceBuilder.categories || {}))
+        }
+        
+        // Save settings
+        if (fullConfig.settings) {
+          localStorage.setItem('soundboard-volume', fullConfig.settings.volume || '1.0')
+          localStorage.setItem('soundboard-language', fullConfig.settings.language || 'en')
+          localStorage.setItem('soundboard-voice', fullConfig.settings.voice || '')
+          localStorage.setItem('soundboard-theme', fullConfig.settings.theme || 'dark')
+        }
+        
+        // Trigger reload of sentence builder
+        if (window.reloadSentenceBuilderConfigs) {
+          window.reloadSentenceBuilderConfigs()
+        }
+        
+        setError('')
+        alert('Full configuration saved! Reloading page to apply all changes...')
+        setTimeout(() => window.location.reload(), 500)
+      } else if (fullConfig.pads && Array.isArray(fullConfig.pads)) {
+        // Legacy format - just soundboard config
+        onConfigUpdate(fullConfig)
+        setError('')
+      } else {
+        throw new Error('Invalid config format')
       }
-
-      onConfigUpdate(newConfig)
-      setError('')
     } catch (err) {
       setError(`Invalid JSON: ${err.message}`)
     }
-  }
-
-  const handleGenerateTTS = () => {
-    if (!config) return
-
-    const updatedConfig = { ...config }
-    
-    updatedConfig.pads = updatedConfig.pads.map(pad => {
-      if (pad && pad.label) {
-        return {
-          ...pad,
-          sound: `tts:${pad.label}`
-        }
-      }
-      return pad
-    })
-
-    setJsonText(JSON.stringify(updatedConfig, null, 2))
   }
 
   const handleTestVoice = () => {
@@ -72,36 +126,18 @@ function AdminPage({ config, onConfigUpdate, onClose, onLoadConfig, selectedVoic
     speechSynthesis.speak(utterance)
   }
 
-  const handleAddPad = () => {
-    try {
-      const currentConfig = JSON.parse(jsonText)
-      const newPad = {
-        id: `pad-${Date.now()}`,
-        label: 'New Pad',
-        sound: 'tts:New Pad',
-        color: '#4f46e5',
-        key: ''
-      }
-      
-      currentConfig.pads = currentConfig.pads || []
-      currentConfig.pads.push(newPad)
-      
-      setJsonText(JSON.stringify(currentConfig, null, 2))
-    } catch (err) {
-      setError('Cannot add pad: Invalid JSON')
-    }
-  }
-
   const handleExport = () => {
     try {
-      const config = JSON.parse(jsonText)
-      const blob = new Blob([JSON.stringify(config, null, 2)], { 
+      // Export whatever is currently in the editor
+      const fullConfig = JSON.parse(jsonText)
+      
+      const blob = new Blob([JSON.stringify(fullConfig, null, 2)], { 
         type: 'application/json' 
       })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = 'soundboard-config.json'
+      a.download = `open-speech-builder-${new Date().toISOString().split('T')[0]}.json`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -138,10 +174,6 @@ function AdminPage({ config, onConfigUpdate, onClose, onLoadConfig, selectedVoic
                 </button>
               </div>
               
-              <button onClick={handleGenerateTTS} className="btn btn-info generate-tts-btn">
-                Generate TTS for All Pads
-              </button>
-              
               <p className="tts-note">
                 Voice and language are controlled globally from the menu. Test voice uses your current selection.
               </p>
@@ -149,16 +181,21 @@ function AdminPage({ config, onConfigUpdate, onClose, onLoadConfig, selectedVoic
           </div>
 
           <div className="admin-section json-section">
-            <h3>Configuration Editor</h3>
+            <h3>Full Configuration Editor</h3>
+            <p className="config-note">
+              <strong>This editor shows ALL app data:</strong>
+              <br/>• <code>soundboard</code> - All buttons, colors, sounds, layout
+              <br/>• <code>sentenceBuilder</code> - Custom words, pronunciations, categories
+              <br/>• <code>settings</code> - Volume, language, voice, theme
+              <br/><br/>
+              Edit the JSON directly or use the buttons below. Changes apply to everything.
+            </p>
             <div className="editor-controls">
-              <button onClick={onLoadConfig} className="btn btn-success load-config-btn">
-                Load Config File...
-              </button>
-              <button onClick={handleAddPad} className="btn btn-success add-pad-btn">
-                Add New Pad
-              </button>
               <button onClick={handleExport} className="btn btn-warning export-btn">
-                Export Config
+                💾 Export to File
+              </button>
+              <button onClick={onLoadConfig} className="btn btn-success load-config-btn">
+                📂 Import from File
               </button>
             </div>
             

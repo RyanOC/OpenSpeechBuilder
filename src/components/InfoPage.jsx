@@ -31,15 +31,15 @@ function InfoPage({ onClose, isDarkMode }) {
           </section>
 
           <section className="info-section">
-            <h2>Three Communication Modes</h2>
-            <p>Open Speech Builder offers three different ways to communicate:</p>
+            <h2>Two Communication Modes</h2>
+            <p>Open Speech Builder offers two different ways to communicate:</p>
             
             <h3>🔊 Soundboard</h3>
             <ul>
               <li><strong>Quick communication</strong> - Pre-configured buttons for common phrases</li>
               <li><strong>Keyboard shortcuts</strong> - Each button has a key (1234/QWER/ASDF/ZXCV)</li>
               <li><strong>Customizable layout</strong> - Edit buttons, colors, and sounds</li>
-              <li><strong>Custom images</strong> - Add visual icons to buttons</li>
+              <li><strong>Display order</strong> - Arrange buttons in your preferred sequence</li>
             </ul>
 
             <h3>📝 Sentence Builder</h3>
@@ -49,21 +49,13 @@ function InfoPage({ onClose, isDarkMode }) {
               <li><strong>Custom vocabulary</strong> - Add your own words to any category</li>
               <li><strong>Sentence history</strong> - Your last sentence is saved automatically</li>
             </ul>
-
-            <h3>🎨 Image Designer</h3>
-            <ul>
-              <li><strong>Create custom icons</strong> - Design 16x16 pixel images for buttons</li>
-              <li><strong>Simple tools</strong> - Draw, erase, and color pick</li>
-              <li><strong>Theme-aware</strong> - Default colors adapt to light/dark theme</li>
-              <li><strong>Save library</strong> - Store and reuse your custom images</li>
-            </ul>
           </section>
 
           <section className="info-section">
             <h2>How to use it</h2>
             <h3>Basic Usage</h3>
             <ul>
-              <li><strong>Switch views</strong> - Use the toggle button (🔊📝🎨) to change modes</li>
+              <li><strong>Switch views</strong> - Use the toggle button (🔊📝) to change modes</li>
               <li><strong>Click or tap</strong> any button to hear it speak</li>
               <li><strong>Adjust volume</strong> with the slider in the menu (hamburger button)</li>
               <li><strong>Change theme</strong> - Toggle between dark and light mode</li>
@@ -73,7 +65,7 @@ function InfoPage({ onClose, isDarkMode }) {
             <h3>Edit Mode Features</h3>
             <ul>
               <li><strong>Enable edit mode</strong> - Click the ✏️ button to customize buttons</li>
-              <li><strong>Configure buttons</strong> - Click any button to edit label, color, sound, image</li>
+              <li><strong>Configure buttons</strong> - Click any button to edit label, color, and sound</li>
               <li><strong>Set display order</strong> - Use order numbers to arrange buttons</li>
               <li><strong>Move between categories</strong> - Change which category a word belongs to</li>
               <li><strong>Customize categories</strong> - Edit category names, colors, and icons</li>
@@ -98,10 +90,10 @@ function InfoPage({ onClose, isDarkMode }) {
             <h3>Button Properties</h3>
             <ul>
               <li><strong>label</strong> - Text displayed on the button</li>
-              <li><strong>sound</strong> - Either "tts:Text to speak" or path to audio file</li>
+              <li><strong>sound</strong> - Text to speak (or URL to audio file)</li>
               <li><strong>color</strong> - Hex color code for the button background</li>
               <li><strong>key</strong> - Keyboard shortcut (single character)</li>
-              <li><strong>image</strong> - Custom 16x16 pixel icon (created in Image Designer)</li>
+
               <li><strong>order</strong> - Display order number (1, 2, 3...) for custom sorting</li>
               <li><strong>category</strong> - Which category the word belongs to (Sentence Builder only)</li>
             </ul>
@@ -124,20 +116,13 @@ function InfoPage({ onClose, isDarkMode }) {
   "pads": [
     {
       "id": "hello-pad",
-      "label": "Hello",
-      "sound": "tts:Hello there, how are you?",
+      "label": "😊 Hello",
+      "sound": "Hello there, how are you?",
       "color": "#3b82f6",
       "key": "1",
-      "image": "smiley",
       "order": "1"
     }
-  ],
-  "imageLibrary": {
-    "smiley": {
-      "name": "Smiley Face",
-      "data": [[0,1,1,0], [1,0,0,1], [1,0,0,1], [0,1,1,0]]
-    }
-  }
+  ]
 }`}</pre>
           </section>
 
@@ -161,7 +146,7 @@ function InfoPage({ onClose, isDarkMode }) {
             <h3>Custom Vocabulary</h3>
             <ul>
               <li><strong>Add new words</strong> - Click the "+" button in any category</li>
-              <li><strong>Edit existing words</strong> - Customize pronunciation, color, and images</li>
+              <li><strong>Edit existing words</strong> - Customize pronunciation and color</li>
               <li><strong>Move words</strong> - Change which category a word belongs to</li>
               <li><strong>Colorful variety</strong> - Each word gets a unique color automatically</li>
             </ul>
@@ -169,31 +154,8 @@ function InfoPage({ onClose, isDarkMode }) {
             <h3>Category Customization</h3>
             <ul>
               <li><strong>Edit category tabs</strong> - Change names, colors, and icons</li>
-              <li><strong>Custom icons</strong> - Use emojis or create custom images</li>
+              <li><strong>Custom icons</strong> - Use emojis to personalize categories</li>
               <li><strong>Personalized organization</strong> - Adapt categories to your needs</li>
-            </ul>
-          </section>
-
-          <section className="info-section">
-            <h2>Image Designer</h2>
-            <p>
-              Create custom 16x16 pixel icons for your buttons:
-            </p>
-
-            <h3>Drawing Tools</h3>
-            <ul>
-              <li><strong>🎨 Brush</strong> - Draw pixels with selected color</li>
-              <li><strong>🧽 Eraser</strong> - Remove pixels (make transparent)</li>
-              <li><strong>🎯 Color Picker</strong> - Sample colors from existing pixels</li>
-              <li><strong>Color selector</strong> - Choose any color, defaults to theme-appropriate color</li>
-            </ul>
-
-            <h3>Image Management</h3>
-            <ul>
-              <li><strong>Save images</strong> - Store your creations in the image library</li>
-              <li><strong>Load images</strong> - Edit existing images from your library</li>
-              <li><strong>Export/Import</strong> - Share image libraries as JSON</li>
-              <li><strong>Preview</strong> - See how images look on buttons</li>
             </ul>
           </section>
 
@@ -210,8 +172,8 @@ function InfoPage({ onClose, isDarkMode }) {
             </ul>
 
             <p>
-              To use TTS, set the sound property to <code>"tts:Your text here"</code>. The app will speak
-              the text instead of playing an audio file.
+              Simply set the sound property to the text you want spoken. The app automatically uses text-to-speech.
+              If you need to use an audio file instead, provide a full URL (e.g., <code>"https://..."</code>).
             </p>
           </section>
 
@@ -235,7 +197,7 @@ function InfoPage({ onClose, isDarkMode }) {
               <li><strong>Customize your experience</strong> - Change voice and volume in the menu (hamburger button)</li>
               <li><strong>Enter edit mode</strong> - Click the ✏️ button to start customizing buttons</li>
               <li><strong>Add personal content</strong> - Create buttons with your own words and phrases</li>
-              <li><strong>Design custom icons</strong> - Use the Image Designer to create visual symbols</li>
+              <li><strong>Use emojis</strong> - Add visual symbols to make buttons more recognizable</li>
               <li><strong>Organize with order</strong> - Use display order numbers to arrange buttons logically</li>
               <li><strong>Export your setup</strong> - Save your customized configuration to keep it safe</li>
             </ol>
@@ -246,7 +208,7 @@ function InfoPage({ onClose, isDarkMode }) {
             <ul>
               <li><strong>Start with Soundboard</strong> - Begin with pre-made phrases for immediate communication</li>
               <li><strong>Progress to Sentence Builder</strong> - Introduce word-by-word construction as skills develop</li>
-              <li><strong>Use visual cues</strong> - Add custom images to buttons for better recognition</li>
+              <li><strong>Use visual cues</strong> - Add emojis to buttons for better recognition</li>
               <li><strong>Organize logically</strong> - Use display order to put most important buttons first</li>
               <li><strong>Personalize vocabulary</strong> - Add family names, favorite foods, and personal interests</li>
               <li><strong>Consistent colors</strong> - Use similar colors for related concepts</li>

@@ -3,7 +3,7 @@ import Grid from './components/Grid'
 import AdminPage from './components/AdminPage'
 import InfoPage from './components/InfoPage'
 import SentenceBuilder from './components/SentenceBuilder'
-import ImageDesigner from './components/ImageDesigner'
+
 import ButtonConfigModal from './components/ButtonConfigModal'
 import { loadConfig } from './utils/loadConfig'
 import { useAudioPool } from './hooks/useAudioPool'
@@ -101,10 +101,7 @@ function App() {
     loadConfig(configUrl)
       .then(loadedConfig => {
         setConfig(loadedConfig)
-        // Also save image library to localStorage for ImageDesigner
-        if (loadedConfig.imageLibrary) {
-          localStorage.setItem('image-designer-library', JSON.stringify(loadedConfig.imageLibrary))
-        }
+
       })
       .catch(err => {
         console.error('Failed to load config:', err)
@@ -263,16 +260,52 @@ function App() {
     const reader = new FileReader()
     reader.onload = (e) => {
       try {
-        const configData = JSON.parse(e.target.result)
+        const importedData = JSON.parse(e.target.result)
         
-        // Save to localStorage for persistence
-        localStorage.setItem('soundboard-config-data', JSON.stringify(configData))
-        localStorage.setItem('soundboard-config-url', 'local-file')
+        // Check if this is a full export or just soundboard config
+        if (importedData.soundboard && importedData.version) {
+          // Full export format - restore everything
+          console.log('Importing full backup:', importedData._readme)
+          localStorage.setItem('soundboard-config-data', JSON.stringify(importedData.soundboard))
+          localStorage.setItem('soundboard-config-url', 'local-file')
+          
+          // Restore sentence builder data
+          if (importedData.sentenceBuilder) {
+            localStorage.setItem('sentence-builder-words', JSON.stringify(importedData.sentenceBuilder.words || {}))
+            localStorage.setItem('sentence-builder-custom-words', JSON.stringify(importedData.sentenceBuilder.customWords || {}))
+            localStorage.setItem('sentence-builder-categories', JSON.stringify(importedData.sentenceBuilder.categories || {}))
+          }
+          
+          // Restore settings
+          if (importedData.settings) {
+            localStorage.setItem('soundboard-volume', importedData.settings.volume || '1.0')
+            localStorage.setItem('soundboard-language', importedData.settings.language || 'en')
+            localStorage.setItem('soundboard-voice', importedData.settings.voice || '')
+            localStorage.setItem('soundboard-theme', importedData.settings.theme || 'dark')
+            
+            // Apply settings immediately
+            setVolume(parseFloat(importedData.settings.volume || '1.0'))
+            setSelectedLanguage(importedData.settings.language || 'en')
+            setSelectedVoice(importedData.settings.voice || '')
+            setIsDarkMode(importedData.settings.theme === 'dark')
+          }
+          
+          setConfig(importedData.soundboard)
+          setStatusMessage('Full configuration restored successfully!')
+        } else {
+          // Legacy format - just soundboard config
+          localStorage.setItem('soundboard-config-data', JSON.stringify(importedData))
+          localStorage.setItem('soundboard-config-url', 'local-file')
+          
+          setConfig(importedData)
+          setStatusMessage('Soundboard config loaded successfully!')
+        }
         
-        setConfig(configData)
         setError(null)
-        setStatusMessage('Config loaded successfully!')
-        setTimeout(() => setStatusMessage(''), 2000)
+        setTimeout(() => setStatusMessage(''), 3000)
+        
+        // Reload page to apply all changes
+        setTimeout(() => window.location.reload(), 500)
       } catch (err) {
         setError(`Invalid JSON file: ${err.message}`)
         setTimeout(() => setError(null), 5000)
@@ -288,10 +321,7 @@ function App() {
     // Save to localStorage for persistence
     localStorage.setItem('soundboard-config-data', JSON.stringify(newConfig))
     
-    // Also save image library separately for ImageDesigner
-    if (newConfig.imageLibrary) {
-      localStorage.setItem('image-designer-library', JSON.stringify(newConfig.imageLibrary))
-    }
+
     
     setConfig(newConfig)
     setStatusMessage('Configuration updated!')
@@ -311,11 +341,9 @@ function App() {
   const handleViewToggle = () => {
     if (currentView === 'landing') return // Don't toggle from landing page
     
-    // Cycle through the three views: soundboard -> sentence-builder -> image-designer -> soundboard
+    // Toggle between soundboard and sentence-builder
     if (currentView === 'soundboard') {
       setCurrentView('sentence-builder')
-    } else if (currentView === 'sentence-builder') {
-      setCurrentView('image-designer')
     } else {
       setCurrentView('soundboard')
     }
@@ -334,7 +362,7 @@ function App() {
 
   const handleDismissTip = () => {
     setShowViewTips(false)
-    localStorage.setItem('myvopen-speech-builderoice-tooltip-dismissed', 'true')
+    localStorage.setItem('open-speech-builder-tooltip-dismissed', 'true')
   }
 
   const handleMenuToggle = () => {
@@ -359,7 +387,7 @@ function App() {
       localStorage.removeItem('soundboard-config-url')
       localStorage.removeItem('soundboard-config-data')
       localStorage.removeItem('sentence-builder-last')
-      localStorage.removeItem('myvoice-tooltip-dismissed')
+      localStorage.removeItem('open-speech-builder-tooltip-dismissed')
       
       // Reset state to defaults
       setIsDarkMode(true) // Default to dark mode
@@ -384,8 +412,7 @@ function App() {
       label: '',
       sound: '',
       color: getThemeDefaultColor(),
-      key: '',
-      image: null
+      key: ''
     }
     
     setEditingPad({ ...pad, index: padIndex })
@@ -406,10 +433,9 @@ function App() {
       const wordButton = {
         id: `word-${categoryKey}-${wordIndex}`,
         label: existingConfig?.label || word || '', // Use saved label or default to word
-        sound: existingConfig?.sound || (word ? `tts:${word}` : 'tts:New Word'), // Use saved TTS or default
+        sound: existingConfig?.sound || word || 'New Word', // Use saved sound or default to word
         color: existingConfig?.color || getRandomWordColor(word || 'new-word', categoryKey, wordIndex),
         key: existingConfig?.key || '',
-        image: existingConfig?.image || null,
         order: existingConfig?.order || '',
         category: categoryKey,
         originalCategory: categoryKey, // Store original category for change detection
@@ -440,10 +466,9 @@ function App() {
     const categoryButton = {
       id: `category-${categoryKey}`,
       label: existingConfig?.label || baseCategory?.label || categoryKey,
-      sound: existingConfig?.sound || `tts:${baseCategory?.label || categoryKey}`,
+      sound: existingConfig?.sound || baseCategory?.label || categoryKey,
       color: existingConfig?.color || getThemeDefaultColor(),
       key: existingConfig?.key || '',
-      image: existingConfig?.image || null,
       order: existingConfig?.order || '',
       icon: existingConfig?.icon || baseCategory?.icon || '📁',
       categoryKey: categoryKey,
@@ -464,7 +489,6 @@ function App() {
         label: updatedPad.label,
         sound: updatedPad.sound,
         color: updatedPad.color,
-        image: updatedPad.image,
         order: updatedPad.order,
         icon: updatedPad.icon
       }
@@ -517,7 +541,6 @@ function App() {
         label: updatedPad.label,
         sound: updatedPad.sound,
         color: updatedPad.color,
-        image: updatedPad.image,
         order: updatedPad.order
       }
       
@@ -612,8 +635,7 @@ function App() {
         label: '',
         sound: '',
         color: getThemeDefaultColor(),
-        key: '',
-        image: null
+        key: ''
       })
     }
     
@@ -624,7 +646,6 @@ function App() {
       sound: updatedPad.sound,
       color: updatedPad.color,
       key: updatedPad.key,
-      image: updatedPad.image,
       order: updatedPad.order
     }
     
@@ -727,12 +748,10 @@ function App() {
                 onClick={handleViewToggle}
                 className="btn btn-ghost btn-icon view-toggle"
                 aria-label={`Switch to ${
-                  currentView === 'soundboard' ? 'sentence builder' : 
-                  currentView === 'sentence-builder' ? 'image designer' : 'soundboard'
+                  currentView === 'soundboard' ? 'sentence builder' : 'soundboard'
                 }`}
               >
-                {currentView === 'soundboard' ? '📝' : 
-                 currentView === 'sentence-builder' ? '🎨' : '🔊'}
+                {currentView === 'soundboard' ? '📝' : '🔊'}
               </button>
               
               {/* Tooltip positioned relative to button */}
@@ -789,12 +808,8 @@ function App() {
             <button onClick={handleInfoToggle} className="btn btn-outline btn-block menu-item">
               📖 Info
             </button>
-            <button onClick={handleAdminToggle} className="btn btn-outline btn-block menu-item">
-              ⚙️ Admin
-            </button>
             <button onClick={handleViewToggle} className="btn btn-outline btn-block menu-item">
-              {currentView === 'soundboard' ? '📝 Sentence Builder' : 
-               currentView === 'sentence-builder' ? '🎨 Image Designer' : '🔊 Soundboard'}
+              {currentView === 'soundboard' ? '📝 Sentence Builder' : '🔊 Soundboard'}
             </button>
           </div>
 
@@ -857,6 +872,12 @@ function App() {
               <span className="volume-display">{Math.round(volume * 100)}%</span>
             </div>
           </div>
+
+          <div className="menu-section">
+            <button onClick={handleAdminToggle} className="btn btn-outline btn-block menu-item">
+              ⚙️ Admin
+            </button>
+          </div>
         </div>
       </div>
 
@@ -892,22 +913,10 @@ function App() {
                   <p>Build custom sentences word by word</p>
                 </div>
               </button>
-              
-              <button
-                onClick={() => handleLandingChoice('image-designer')}
-                className="landing-btn image-designer-btn"
-                aria-label="Go to Image Designer"
-              >
-                <div className="landing-btn-icon">🎨</div>
-                <div className="landing-btn-content">
-                  <h3>Image Designer</h3>
-                  <p>Create custom 16x16 pixel icons for your buttons</p>
-                </div>
-              </button>
             </div>
             
             <div className="landing-tip">
-              <p>💡 <strong>Tip:</strong> You can cycle between all three views anytime using the toggle button in the top right corner</p>
+              <p>💡 <strong>Tip:</strong> You can toggle between soundboard and sentence builder using the button in the top right corner</p>
             </div>
           </div>
         </div>
@@ -941,11 +950,7 @@ function App() {
             onCategoryEdit={handleCategoryEdit}
           />
         </>
-      ) : (
-        <ImageDesigner
-          isDarkMode={isDarkMode}
-        />
-      )}
+      ) : null}
 
       {statusMessage && (
         <div className="status-message" role="status" aria-live="polite">

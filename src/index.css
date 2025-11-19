@@ -528,6 +528,13 @@ body {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
+.pad-content > span {
+  line-height: 1.3;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
 .pad-label {
   background: rgba(255, 255, 255, 0.95);
   color: #374151;
@@ -1094,6 +1101,16 @@ body {
   margin: 0.5rem 0;
 }
 
+.config-note {
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: var(--bg-tertiary);
+  border-left: 3px solid var(--primary);
+  border-radius: 4px;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
 .editor-controls {
   display: flex;
   gap: 1rem;
@@ -1195,20 +1212,22 @@ body {
   bottom: 0;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
   z-index: 1000;
   padding: 1rem;
-  overflow-y: auto;
 }
 
 .info-panel {
   border-radius: 1rem;
   width: 100%;
   max-width: 900px;
-  margin: 2rem auto;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
   box-shadow: 0 20px 25px -5px var(--shadow);
   transition: background-color 0.3s ease, border-color 0.3s ease;
+  overflow: hidden;
 }
 
 .info-panel.dark {
@@ -1226,7 +1245,12 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 1.5rem;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: inherit;
 }
 
 .info-header h1 {
@@ -1239,6 +1263,21 @@ body {
   padding: 1.5rem;
   line-height: 1.6;
   color: var(--text-primary);
+  overflow-y: auto;
+  flex: 1;
+}
+
+.info-content a {
+  color: #60a5fa;
+  text-decoration: underline;
+}
+
+.info-content a:hover {
+  color: #93c5fd;
+}
+
+.info-content a:visited {
+  color: #a78bfa;
 }
 
 .info-section {
@@ -1304,6 +1343,10 @@ body {
   border-radius: 0.25rem;
   font-family: 'Courier New', monospace;
   font-size: 0.9rem;
+  color: #c4b5fd;
+}
+
+.info-panel.light .info-section code {
   color: #7c3aed;
 }
 
@@ -1313,7 +1356,7 @@ body {
   }
   
   .info-panel {
-    margin: 1rem auto;
+    max-height: 95vh;
   }
   
   .info-header {
@@ -1457,7 +1500,7 @@ body {
   position: sticky;
   top: 0;
   z-index: 11;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.2rem;
 }
 
 .sentence-display {
@@ -1751,7 +1794,7 @@ body {
     height: 60px;
     min-height: 60px;
     max-height: 60px;
-    padding: 0.5rem 0.25rem 0.25rem 0.25rem;
+    padding: 0.5rem 0.25rem 0.6rem 0.25rem;
   }
   
   .category-tab {
@@ -2710,19 +2753,27 @@ age Designer Styles */
 .form-group input[type="text"],
 .form-group input[type="number"],
 .form-group input[type="color"],
-.form-group select {
+.form-group select,
+.form-group textarea {
   padding: 0.75rem;
   border: 1px solid var(--border-color);
   border-radius: 8px;
   background: var(--bg-secondary);
   color: var(--text-primary);
   font-size: 1rem;
+  font-family: inherit;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 80px;
 }
 
 .form-group input[type="text"]:focus,
 .form-group input[type="number"]:focus,
 .form-group input[type="color"]:focus,
-.form-group select:focus {
+.form-group select:focus,
+.form-group textarea:focus {
   outline: none;
   border-color: var(--primary-color);
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);

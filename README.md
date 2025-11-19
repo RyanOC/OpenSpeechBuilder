@@ -7,7 +7,7 @@ A web-based Augmentative and Alternative Communication (AAC) soundboard designed
 ### 🔊 Soundboard
 - Pre-configured buttons for common phrases
 - Keyboard shortcuts for quick access
-- Customizable colors, sounds, and images
+- Customizable colors and sounds
 - Display order control for logical arrangement
 
 ### 📝 Sentence Builder
@@ -15,12 +15,6 @@ A web-based Augmentative and Alternative Communication (AAC) soundboard designed
 - Organized categories (People, Actions, Things, etc.)
 - Custom vocabulary support
 - Category customization with colors and icons
-
-### 🎨 Image Designer
-- Create custom 16x16 pixel icons
-- Simple drawing tools (brush, eraser, color picker)
-- Theme-aware default colors
-- Save and reuse image library
 
 ## Who is this for?
 
@@ -35,8 +29,7 @@ A web-based Augmentative and Alternative Communication (AAC) soundboard designed
 1. **Choose your mode** - Soundboard for quick phrases or Sentence Builder for custom sentences
 2. **Try the defaults** - Click buttons to hear text-to-speech
 3. **Customize** - Use edit mode (✏️) to personalize buttons
-4. **Create images** - Design custom icons in the Image Designer
-5. **Export/Import** - Save your configurations to share or backup
+4. **Export/Import** - Save your configurations to share or backup
 
 ## Technical Features
 
